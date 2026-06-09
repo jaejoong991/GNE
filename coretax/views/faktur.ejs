@@ -58,6 +58,7 @@
                 <th>Tanggal</th>
                 <th>Customer</th>
                 <th>NPWP</th>
+                <th>Kota</th>
                 <th>Total</th>
                 <th>Status</th>
               </tr>
@@ -65,7 +66,7 @@
             <tbody>
               <% if (fakturList.length === 0) { %>
                 <tr>
-                  <td colspan="7" class="empty-state">Tidak ada data faktur</td>
+                  <td colspan="8" class="empty-state">Tidak ada data faktur</td>
                 </tr>
               <% } else { %>
                 <% fakturList.forEach(function(f) { %>
@@ -75,6 +76,7 @@
                     <td><%= f.tanggal ? new Date(f.tanggal).toLocaleDateString('id-ID') : '-' %></td>
                     <td><%= f.customer_name %></td>
                     <td><%= f.npwp || '-' %></td>
+                    <td><%= f.kota || '-' %></td>
                     <td><%= f.total ? parseFloat(f.total).toLocaleString('id-ID') : '0' %></td>
                     <td><%= f.status_label %></td>
                   </tr>

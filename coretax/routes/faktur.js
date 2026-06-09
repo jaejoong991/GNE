@@ -31,7 +31,8 @@ router.get('/', requireAuth, async (req, res) => {
         i.grandtotal as total,
         bp.name as customer_name,
         COALESCE(bp.${npwpCol}, '') as npwp,
-        COALESCE(bpl.address1 || ', ' || bpl.city, '') as alamat,
+        COALESCE(loc.address1 || ', ' || loc.city, '') as alamat,
+        COALESCE(loc.city, '') as kota,
         i.docstatus,
         CASE 
           WHEN i.docstatus = 'CO' THEN 'Completed'
@@ -42,6 +43,7 @@ router.get('/', requireAuth, async (req, res) => {
       JOIN c_doctype dt ON i.c_doctype_id = dt.c_doctype_id
       JOIN c_bpartner bp ON i.c_bpartner_id = bp.c_bpartner_id
       LEFT JOIN c_bpartner_location bpl ON bp.c_bpartner_id = bpl.c_bpartner_id AND bpl.isbillto = 'Y'
+      LEFT JOIN c_location loc ON bpl.c_location_id = loc.c_location_id
       WHERE i.ad_client_id = $1
         AND i.issotrx = 'Y'
         AND dt.docbasetype = 'ARI'
@@ -92,17 +94,18 @@ router.get('/export', requireAuth, async (req, res) => {
         i.dateinvoiced as tanggal,
         bp.name as nama_pembeli,
         COALESCE(bp.${npwpCol}, '000000000000000') as npwp,
-        COALESCE(bpl.address1 || ', ' || bpl.city, '') as alamat,
+        COALESCE(loc.address1 || ', ' || loc.city, '') as alamat,
         COALESCE(SUM(it.taxbaseamt), 0) as dpp,
         COALESCE(SUM(it.taxamt), 0) as ppn
       FROM c_invoice i
       JOIN c_bpartner bp ON i.c_bpartner_id = bp.c_bpartner_id
       LEFT JOIN c_bpartner_location bpl ON bp.c_bpartner_id = bpl.c_bpartner_id AND bpl.isbillto = 'Y'
+      LEFT JOIN c_location loc ON bpl.c_location_id = loc.c_location_id
       LEFT JOIN c_invoicetax it ON i.c_invoice_id = it.c_invoice_id
       LEFT JOIN c_tax t ON it.c_tax_id = t.c_tax_id AND UPPER(t.name) LIKE '%PPN%'
       WHERE i.ad_client_id = $1
         AND i.c_invoice_id IN (${placeholders})
-      GROUP BY i.c_invoice_id, i.documentno, i.dateinvoiced, bp.name, bp.${npwpCol}, bpl.address1, bpl.city
+      GROUP BY i.c_invoice_id, i.documentno, i.dateinvoiced, bp.name, bp.${npwpCol}, loc.address1, loc.city
       ORDER BY i.dateinvoiced, i.documentno
     `;
     const headerResult = await pool.query(headerQuery, [clientId, ...idArray]);
