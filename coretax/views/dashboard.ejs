@@ -28,12 +28,30 @@
       <div class="alert alert-error"><%= error %></div>
     <% } %>
 
+    <% if (infoMessage) { %>
+      <div class="alert" style="background:#fff3cd;color:#856404;border:1px solid #ffeaa7;">
+        <%= infoMessage %>
+      </div>
+    <% } %>
+
     <div class="card">
       <form method="GET" action="/dashboard">
         <div class="filter-bar">
           <div class="form-group">
-            <label>Periode</label>
-            <input type="month" name="periode" value="<%= periode %>">
+            <label>Tahun</label>
+            <select name="tahun">
+              <% tahunList.forEach(function(t) { %>
+                <option value="<%= t %>" <%= t === tahun ? 'selected' : '' %>><%= t %></option>
+              <% }); %>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Bulan</label>
+            <select name="bulan">
+              <% bulanList.forEach(function(b) { %>
+                <option value="<%= b.value %>" <%= b.value === bulan ? 'selected' : '' %>><%= b.label %></option>
+              <% }); %>
+            </select>
           </div>
           <button type="submit" class="btn btn-primary">Tampilkan</button>
           <a href="/dashboard" class="btn" style="background:#95a5a6;color:#fff;">Reset</a>
