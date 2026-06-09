@@ -124,7 +124,7 @@ function build() {
 `;
   fs.writeFileSync(path.join(DIST_DIR, 'README-BUILD.md'), readme);
 
-  console.log('\n✅ Build selesai. Output di folder: dist/');
+  console.log('\n✅ Build selesai. Output di folder: coretax-client/');
 }
 
 build();

@@ -6,13 +6,27 @@ const { requireAuth } = require('../auth');
 router.get('/', requireAuth, async (req, res) => {
   try {
     const clientId = req.session.clientId;
+    const { periode } = req.query;
 
-    // Hitung jumlah faktur bulan ini
-    const now = new Date();
-    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    // Parse periode (format: YYYY-MM dari input type="month")
+    let year, month;
+    if (periode && /^\d{4}-\d{2}$/.test(periode)) {
+      [year, month] = periode.split('-').map(Number);
+    } else {
+      const now = new Date();
+      year = now.getFullYear();
+      month = now.getMonth() + 1;
+    }
 
-    const countQuery = `
+    const firstDay = new Date(year, month - 1, 1);
+    const lastDay = new Date(year, month, 0);
+    const dateFrom = firstDay.toISOString().split('T')[0];
+    const dateTo = lastDay.toISOString().split('T')[0];
+    const periodeLabel = firstDay.toLocaleString('id-ID', { month: 'long', year: 'numeric' });
+    const periodeValue = `${year}-${String(month).padStart(2, '0')}`;
+
+    // Total faktur keluaran
+    const keluaranQuery = `
       SELECT COUNT(*) as total
       FROM c_invoice i
       JOIN c_doctype dt ON i.c_doctype_id = dt.c_doctype_id
@@ -22,54 +36,39 @@ router.get('/', requireAuth, async (req, res) => {
         AND i.dateinvoiced BETWEEN $2 AND $3
         AND i.docstatus IN ('CO', 'CL')
     `;
-    const countResult = await pool.query(countQuery, [
-      clientId,
-      firstDay.toISOString().split('T')[0],
-      lastDay.toISOString().split('T')[0],
-    ]);
+    const keluaranResult = await pool.query(keluaranQuery, [clientId, dateFrom, dateTo]);
+    const totalKeluaran = parseInt(keluaranResult.rows[0].total, 10);
 
-    const totalFaktur = parseInt(countResult.rows[0].total, 10);
-
-    // Hitung total DPP & PPN bulan ini
-    const taxQuery = `
-      SELECT 
-        COALESCE(SUM(it.taxbaseamt), 0) as total_dpp,
-        COALESCE(SUM(it.taxamt), 0) as total_ppn
+    // Total faktur masukan
+    const masukanQuery = `
+      SELECT COUNT(*) as total
       FROM c_invoice i
       JOIN c_doctype dt ON i.c_doctype_id = dt.c_doctype_id
-      JOIN c_invoicetax it ON i.c_invoice_id = it.c_invoice_id
-      JOIN c_tax t ON it.c_tax_id = t.c_tax_id
       WHERE i.ad_client_id = $1
-        AND i.issotrx = 'Y'
-        AND dt.docbasetype = 'ARI'
+        AND i.issotrx = 'N'
+        AND dt.docbasetype = 'API'
         AND i.dateinvoiced BETWEEN $2 AND $3
         AND i.docstatus IN ('CO', 'CL')
-        AND UPPER(t.name) LIKE '%PPN%'
     `;
-    const taxResult = await pool.query(taxQuery, [
-      clientId,
-      firstDay.toISOString().split('T')[0],
-      lastDay.toISOString().split('T')[0],
-    ]);
-
-    const totalDpp = parseFloat(taxResult.rows[0].total_dpp);
-    const totalPpn = parseFloat(taxResult.rows[0].total_ppn);
+    const masukanResult = await pool.query(masukanQuery, [clientId, dateFrom, dateTo]);
+    const totalMasukan = parseInt(masukanResult.rows[0].total, 10);
 
     res.render('dashboard', {
       userName: req.session.userName,
-      totalFaktur,
-      totalDpp,
-      totalPpn,
-      currentMonth: now.toLocaleString('id-ID', { month: 'long', year: 'numeric' }),
+      totalKeluaran,
+      totalMasukan,
+      periode: periodeValue,
+      periodeLabel,
+      error: null,
     });
   } catch (err) {
     console.error('Dashboard error:', err);
     res.render('dashboard', {
       userName: req.session.userName,
-      totalFaktur: 0,
-      totalDpp: 0,
-      totalPpn: 0,
-      currentMonth: '-',
+      totalKeluaran: 0,
+      totalMasukan: 0,
+      periode: '',
+      periodeLabel: '-',
       error: 'Gagal memuat data dashboard',
     });
   }

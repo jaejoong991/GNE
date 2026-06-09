@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dashboard - CoreTax e-Faktur</title>
+  <title>Dashboard - CoreTax Generator</title>
   <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
@@ -11,7 +11,7 @@
     <div class="navbar-inner">
       <div class="navbar-brand">
         <img src="/images/logo.png" alt="Logo" onerror="this.style.display='none'">
-        CoreTax e-Faktur
+        CoreTax Generator
       </div>
       <div class="navbar-links">
         <a href="/dashboard">Dashboard</a>
@@ -24,30 +24,43 @@
   <div class="container">
     <h2 style="margin-bottom: 20px;">Selamat datang, <%= userName %></h2>
 
-    <div class="stats-grid">
+    <% if (error) { %>
+      <div class="alert alert-error"><%= error %></div>
+    <% } %>
+
+    <div class="card">
+      <form method="GET" action="/dashboard">
+        <div class="filter-bar">
+          <div class="form-group">
+            <label>Periode</label>
+            <input type="month" name="periode" value="<%= periode %>">
+          </div>
+          <button type="submit" class="btn btn-primary">Tampilkan</button>
+          <a href="/dashboard" class="btn" style="background:#95a5a6;color:#fff;">Reset</a>
+        </div>
+      </form>
+    </div>
+
+    <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));">
       <div class="stat-card">
-        <div class="stat-value"><%= totalFaktur %></div>
-        <div class="stat-label">Faktur Bulan <%= currentMonth %></div>
+        <div class="stat-value"><%= totalKeluaran %></div>
+        <div class="stat-label">Keluaran — <%= periodeLabel %></div>
       </div>
       <div class="stat-card">
-        <div class="stat-value"><%= totalDpp.toLocaleString('id-ID') %></div>
-        <div class="stat-label">Total DPP</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-value"><%= totalPpn.toLocaleString('id-ID') %></div>
-        <div class="stat-label">Total PPN</div>
+        <div class="stat-value"><%= totalMasukan %></div>
+        <div class="stat-label">Masukan — <%= periodeLabel %></div>
       </div>
     </div>
 
     <div class="card">
-      <h3>Menu Cepat</h3>
+      <h3 style="margin-bottom: 16px;">Menu Cepat</h3>
       <a href="/faktur?tipe=keluaran" class="btn btn-primary">Faktur PPN Keluaran</a>
       <a href="/faktur?tipe=masukan" class="btn btn-primary" style="margin-left:8px;">Faktur PPN Masukan</a>
     </div>
   </div>
 
   <div class="footer">
-    CoreTax e-Faktur App &copy; <%= new Date().getFullYear() %>
+    CoreTax Generator App &copy; <%= new Date().getFullYear() %>
   </div>
 </body>
 </html>

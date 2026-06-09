@@ -17,7 +17,7 @@ coretax/
 ├── db.js                  # Pool koneksi PostgreSQL
 ├── auth.js                # Login langsung ke tabel ad_user
 ├── license.js             # Validasi & generator license key
-├── build.js               # Script build → obfuscate ke dist/
+├── build.js               # Script build → obfuscate ke coretax-client/
 ├── generate-license.js    # Script generate license untuk client
 ├── package.json
 ├── .env                   # Konfigurasi lokal (tidak masuk git)
@@ -77,11 +77,11 @@ npm run build
 ```
 
 Hasil:
-- Folder `dist/` berisi app siap jual
+- Folder `coretax-client/` berisi app siap jual
 - Semua file `.js` sudah di-obfuscate & minify
 - File non-JS (views, css, config) di-copy apa adanya
 
-**Yang dijual ke client = isi folder `dist/` saja.**
+**Yang dijual ke client = isi folder `coretax-client/` saja.**
 
 ### Opsi Build Manual
 
