@@ -1,0 +1,5 @@
+# Ignore Adempiere binaries so they are not committed to git
+Adempiere/
+*.zip
+*.tar.gz
+*.tgz

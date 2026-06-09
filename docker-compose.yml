@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:9.2
+    container_name: adempiere-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  adempiere:
+    build: ./adempiere
+    container_name: adempiere-app
+    restart: unless-stopped
+    environment:
+      ADEMPIERE_HOME: /opt/Adempiere
+      JAVA_HOME: /usr/lib/jvm/java-7-openjdk-amd64
+      ADEMPIERE_DB_SERVER: db
+      ADEMPIERE_DB_PORT: 5432
+      ADEMPIERE_DB_NAME: adempiere
+      ADEMPIERE_DB_USER: adempiere
+      ADEMPIERE_DB_PASSWORD: adempiere
+      ADEMPIERE_DB_SYSTEM: postgres
+      ADEMPIERE_DB_TYPE: PostgreSQL
+      ADEMPIERE_WEB_PORT: 8080
+      ADEMPIERE_SSL_PORT: 8443
+    ports:
+      - "8080:8080"
+      - "8443:8443"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - adempiere-data:/opt/Adempiere/data
+
+volumes:
+  pgdata:
+  adempiere-data:

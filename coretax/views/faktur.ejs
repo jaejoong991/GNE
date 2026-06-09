@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Faktur PPN - CoreTax e-Faktur</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="navbar-inner">
+      <div class="navbar-brand">CoreTax e-Faktur</div>
+      <div class="navbar-links">
+        <a href="/dashboard">Dashboard</a>
+        <a href="/faktur">Faktur PPN</a>
+        <a href="/login/logout">Logout</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container">
+    <h2 style="margin-bottom: 20px;">Faktur PPN Keluaran</h2>
+
+    <% if (error) { %>
+      <div class="alert alert-error"><%= error %></div>
+    <% } %>
+
+    <div class="card">
+      <form method="GET" action="/faktur">
+        <div class="filter-bar">
+          <div class="form-group">
+            <label>Dari Tanggal</label>
+            <input type="date" name="start" value="<%= start %>">
+          </div>
+          <div class="form-group">
+            <label>Sampai Tanggal</label>
+            <input type="date" name="end" value="<%= end %>">
+          </div>
+          <button type="submit" class="btn btn-primary">Filter</button>
+          <a href="/faktur" class="btn" style="background:#95a5a6;color:#fff;">Reset</a>
+        </div>
+      </form>
+    </div>
+
+    <form method="GET" action="/faktur/export">
+      <div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+          <h3 style="margin:0;">Daftar Faktur</h3>
+          <button type="submit" class="btn btn-success">Export CSV CoreTax</button>
+        </div>
+
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th><input type="checkbox" id="selectAll" title="Pilih semua"></th>
+                <th>Nomor Faktur</th>
+                <th>Tanggal</th>
+                <th>Customer</th>
+                <th>NPWP</th>
+                <th>Total</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if (fakturList.length === 0) { %>
+                <tr>
+                  <td colspan="7" class="empty-state">Tidak ada data faktur</td>
+                </tr>
+              <% } else { %>
+                <% fakturList.forEach(function(f) { %>
+                  <tr>
+                    <td><input type="checkbox" name="ids" value="<%= f.c_invoice_id %>"></td>
+                    <td><%= f.nomor_faktur %></td>
+                    <td><%= f.tanggal ? new Date(f.tanggal).toLocaleDateString('id-ID') : '-' %></td>
+                    <td><%= f.customer_name %></td>
+                    <td><%= f.npwp || '-' %></td>
+                    <td><%= f.total ? parseFloat(f.total).toLocaleString('id-ID') : '0' %></td>
+                    <td><%= f.status_label %></td>
+                  </tr>
+                <% }); %>
+              <% } %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <div class="footer">
+    CoreTax e-Faktur App &copy; <%= new Date().getFullYear() %>
+  </div>
+
+  <script>
+    document.getElementById('selectAll').addEventListener('change', function(e) {
+      const checkboxes = document.querySelectorAll('input[name="ids"]');
+      checkboxes.forEach(cb => cb.checked = e.target.checked);
+    });
+  </script>
+</body>
+</html>

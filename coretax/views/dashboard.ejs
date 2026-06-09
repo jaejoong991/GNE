@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - CoreTax e-Faktur</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="navbar-inner">
+      <div class="navbar-brand">CoreTax e-Faktur</div>
+      <div class="navbar-links">
+        <a href="/dashboard">Dashboard</a>
+        <a href="/faktur">Faktur PPN</a>
+        <a href="/login/logout">Logout</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container">
+    <h2 style="margin-bottom: 20px;">Selamat datang, <%= userName %></h2>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-value"><%= totalFaktur %></div>
+        <div class="stat-label">Faktur Bulan <%= currentMonth %></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value"><%= totalDpp.toLocaleString('id-ID') %></div>
+        <div class="stat-label">Total DPP</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value"><%= totalPpn.toLocaleString('id-ID') %></div>
+        <div class="stat-label">Total PPN</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Menu Cepat</h3>
+      <a href="/faktur" class="btn btn-primary">Lihat Faktur PPN Keluaran</a>
+    </div>
+  </div>
+
+  <div class="footer">
+    CoreTax e-Faktur App &copy; <%= new Date().getFullYear() %>
+  </div>
+</body>
+</html>
