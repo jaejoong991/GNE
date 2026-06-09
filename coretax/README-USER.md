@@ -189,6 +189,29 @@ Restart app setelah ubah.
 
 ---
 
+## Ganti Logo Perusahaan
+
+Logo ditampilkan di navbar (atas halaman) dan di halaman login.
+
+### Cara Ganti
+
+1. Siapkan file logo (disarankan format `.png` atau `.jpg`).
+2. Ganti file ini dengan logo kamu:
+   ```
+   public/images/logo.png
+   ```
+3. Ukuran yang direkomendasikan:
+   - **Navbar:** tinggi sekitar 32px
+   - **Login page:** tinggi maksimal 60px
+4. Restart aplikasi setelah ganti logo:
+   ```bash
+   npm start
+   ```
+
+Kalau belum ada file logo, halaman tetap jalan normal — bagian logo otomatis disembunyikan.
+
+---
+
 ## Catatan Keamanan
 
 - **Jangan bagikan file `.env`** — terutama `CORETAX_LICENSE_KEY` dan `CORETAX_SESSION_SECRET`.

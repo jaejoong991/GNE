@@ -112,6 +112,35 @@ signature = HMAC-SHA256("GNE" + clientId, SECRET).substring(0, 8)
 
 ---
 
+## Ganti Logo Perusahaan
+
+Logo ditampilkan di **navbar** (semua halaman) dan **login page**.
+
+### Cara Ganti
+
+1. Copy file logo ke:
+   ```
+   public/images/logo.png
+   ```
+
+2. Format yang didukung: `.png`, `.jpg`, `.svg`
+
+3. Kalau mau ganti nama file atau extension, edit di 3 file template:
+   - `views/login.ejs`
+   - `views/dashboard.ejs`
+   - `views/faktur.ejs`
+
+   Cari tag `<img src="/images/logo.png"` dan ganti path-nya.
+
+4. Re-build kalau sudah production:
+   ```bash
+   npm run build
+   ```
+
+**Catatan:** Kalau file logo belum ada, halaman tetap jalan normal — logo otomatis hidden.
+
+---
+
 ## Konfigurasi Kolom NPWP
 
 Default ambil dari `c_bpartner.taxid`. Kalau client pakai kolom custom:

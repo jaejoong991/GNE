@@ -125,8 +125,30 @@ body {
 }
 
 .navbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   font-size: 18px;
   font-weight: 700;
+}
+
+.navbar-brand img,
+.navbar-brand .logo-placeholder {
+  height: 32px;
+  width: auto;
+  border-radius: 4px;
+}
+
+.logo-placeholder {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.15);
+  color: #fff;
+  font-size: 12px;
+  padding: 0 10px;
+  height: 32px;
+  border-radius: 4px;
 }
 
 .navbar-links a {

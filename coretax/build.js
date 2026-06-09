@@ -3,7 +3,7 @@ const path = require('path');
 const JavaScriptObfuscator = require('javascript-obfuscator');
 
 const SRC_DIR = __dirname;
-const DIST_DIR = path.join(__dirname, 'dist');
+const DIST_DIR = path.join(__dirname, 'coretax-client');
 
 // Daftar file JS yang perlu di-obfuscate
 const jsFiles = [
