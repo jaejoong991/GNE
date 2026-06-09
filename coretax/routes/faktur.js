@@ -11,16 +11,30 @@ function getNpwpColumn() {
 router.get('/', requireAuth, async (req, res) => {
   try {
     const clientId = req.session.clientId;
-    const { start, end } = req.query;
+    const { start, end, nomor_faktur, customer } = req.query;
 
     const npwpCol = getNpwpColumn();
 
-    let dateFilter = '';
+    const filters = [];
     const params = [clientId];
+    let idx = 2;
 
     if (start && end) {
-      dateFilter = 'AND i.dateinvoiced BETWEEN $2 AND $3';
+      filters.push(`AND i.dateinvoiced BETWEEN $${idx} AND $${idx + 1}`);
       params.push(start, end);
+      idx += 2;
+    }
+
+    if (nomor_faktur && nomor_faktur.trim()) {
+      filters.push(`AND UPPER(i.documentno) LIKE UPPER($${idx})`);
+      params.push(nomor_faktur.trim());
+      idx++;
+    }
+
+    if (customer && customer.trim()) {
+      filters.push(`AND UPPER(bp.name) LIKE UPPER($${idx})`);
+      params.push(customer.trim());
+      idx++;
     }
 
     const query = `
@@ -47,7 +61,7 @@ router.get('/', requireAuth, async (req, res) => {
       WHERE i.ad_client_id = $1
         AND i.issotrx = 'Y'
         AND dt.docbasetype = 'ARI'
-        ${dateFilter}
+        ${filters.join(' ')}
       ORDER BY i.dateinvoiced DESC, i.documentno DESC
       LIMIT 500
     `;
@@ -59,6 +73,8 @@ router.get('/', requireAuth, async (req, res) => {
       fakturList: result.rows,
       start: start || '',
       end: end || '',
+      nomor_faktur: nomor_faktur || '',
+      customer: customer || '',
       error: null,
     });
   } catch (err) {
@@ -68,6 +84,8 @@ router.get('/', requireAuth, async (req, res) => {
       fakturList: [],
       start: start || '',
       end: end || '',
+      nomor_faktur: nomor_faktur || '',
+      customer: customer || '',
       error: 'Gagal memuat data faktur: ' + err.message,
     });
   }
@@ -84,6 +102,7 @@ router.get('/export', requireAuth, async (req, res) => {
 
     const idArray = Array.isArray(ids) ? ids : [ids];
     const placeholders = idArray.map((_, i) => `$${i + 2}`).join(',');
+    const linePlaceholders = idArray.map((_, i) => `$${i + 1}`).join(',');
     const npwpCol = getNpwpColumn();
 
     // Ambil header faktur (FK)
@@ -123,10 +142,10 @@ router.get('/export', requireAuth, async (req, res) => {
       LEFT JOIN m_product p ON il.m_product_id = p.m_product_id
       LEFT JOIN c_invoicetax it ON il.c_invoice_id = it.c_invoice_id
       LEFT JOIN c_tax t ON it.c_tax_id = t.c_tax_id AND UPPER(t.name) LIKE '%PPN%'
-      WHERE il.c_invoice_id IN (${placeholders})
+      WHERE il.c_invoice_id IN (${linePlaceholders})
       ORDER BY il.c_invoice_id, il.line
     `;
-    const lineResult = await pool.query(lineQuery, [...idArray]);
+    const lineResult = await pool.query(lineQuery, idArray);
 
     // Group lines by invoice
     const linesByInvoice = {};
