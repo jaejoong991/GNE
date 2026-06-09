@@ -9,6 +9,7 @@ const path = require('path');
 const loginRoutes = require('./routes/login');
 const dashboardRoutes = require('./routes/dashboard');
 const fakturRoutes = require('./routes/faktur');
+const { validateLicense } = require('./license');
 
 const app = express();
 const PORT = process.env.CORETAX_APP_PORT || 3000;
@@ -18,6 +19,15 @@ if (!process.env.CORETAX_SESSION_SECRET) {
   console.error('ERROR: CORETAX_SESSION_SECRET harus di-set di file .env');
   process.exit(1);
 }
+
+// Validasi license key
+const licenseCheck = validateLicense(process.env.CORETAX_LICENSE_KEY);
+if (!licenseCheck.valid) {
+  console.error('ERROR:', licenseCheck.message);
+  console.error('Silakan hubungi administrator untuk mendapatkan license key yang valid.');
+  process.exit(1);
+}
+console.log('License validated. Client ID:', licenseCheck.clientId);
 
 // Security headers
 app.use(helmet({

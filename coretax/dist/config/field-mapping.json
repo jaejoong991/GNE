@@ -1,0 +1,5 @@
+{
+  "npwpColumn": "taxid",
+  "npwpTable": "c_bpartner",
+  "npwpDescription": "Kolom sumber NPWP di tabel c_bpartner. Ubah ke kolom custom jika diperlukan."
+}
