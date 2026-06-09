@@ -8,10 +8,30 @@ function getNpwpColumn() {
   return process.env.CORETAX_NPWP_COLUMN || 'taxid';
 }
 
+function getTipeConfig(tipe) {
+  if (tipe === 'masukan') {
+    return {
+      isSoTrx: 'N',
+      docBaseType: 'API',
+      label: 'PPN Masukan',
+      partnerLabel: 'Supplier',
+      rowPrefix: 'FM',
+    };
+  }
+  return {
+    isSoTrx: 'Y',
+    docBaseType: 'ARI',
+    label: 'PPN Keluaran',
+    partnerLabel: 'Customer',
+    rowPrefix: 'FK',
+  };
+}
+
 router.get('/', requireAuth, async (req, res) => {
   try {
     const clientId = req.session.clientId;
-    const { start, end, nomor_faktur, customer } = req.query;
+    const { start, end, nomor_faktur, customer, tipe } = req.query;
+    const config = getTipeConfig(tipe);
 
     const npwpCol = getNpwpColumn();
 
@@ -43,7 +63,7 @@ router.get('/', requireAuth, async (req, res) => {
         i.documentno as nomor_faktur,
         i.dateinvoiced as tanggal,
         i.grandtotal as total,
-        bp.name as customer_name,
+        bp.name as partner_name,
         COALESCE(bp.${npwpCol}, '') as npwp,
         COALESCE(loc.address1 || ', ' || loc.city, '') as alamat,
         COALESCE(loc.city, '') as kota,
@@ -59,8 +79,8 @@ router.get('/', requireAuth, async (req, res) => {
       LEFT JOIN c_bpartner_location bpl ON bp.c_bpartner_id = bpl.c_bpartner_id AND bpl.isbillto = 'Y'
       LEFT JOIN c_location loc ON bpl.c_location_id = loc.c_location_id
       WHERE i.ad_client_id = $1
-        AND i.issotrx = 'Y'
-        AND dt.docbasetype = 'ARI'
+        AND i.issotrx = '${config.isSoTrx}'
+        AND dt.docbasetype = '${config.docBaseType}'
         ${filters.join(' ')}
       ORDER BY i.dateinvoiced DESC, i.documentno DESC
       LIMIT 500
@@ -75,17 +95,22 @@ router.get('/', requireAuth, async (req, res) => {
       end: end || '',
       nomor_faktur: nomor_faktur || '',
       customer: customer || '',
+      tipe: tipe || 'keluaran',
+      config,
       error: null,
     });
   } catch (err) {
     console.error('Faktur list error:', err);
+    const config = getTipeConfig(req.query.tipe);
     res.render('faktur', {
       userName: req.session.userName,
       fakturList: [],
-      start: start || '',
-      end: end || '',
-      nomor_faktur: nomor_faktur || '',
-      customer: customer || '',
+      start: req.query.start || '',
+      end: req.query.end || '',
+      nomor_faktur: req.query.nomor_faktur || '',
+      customer: req.query.customer || '',
+      tipe: req.query.tipe || 'keluaran',
+      config,
       error: 'Gagal memuat data faktur: ' + err.message,
     });
   }
@@ -94,7 +119,8 @@ router.get('/', requireAuth, async (req, res) => {
 router.get('/export', requireAuth, async (req, res) => {
   try {
     const clientId = req.session.clientId;
-    const { ids } = req.query;
+    const { ids, tipe } = req.query;
+    const config = getTipeConfig(tipe);
 
     if (!ids) {
       return res.status(400).send('Tidak ada faktur yang dipilih');
@@ -108,15 +134,15 @@ router.get('/export', requireAuth, async (req, res) => {
     }
 
     // Security: validasi server-side bahwa semua ID benar-benar milik client ini
-    // dan adalah faktur keluaran (ARI). Ini mencegah inspect-element manipulation.
+    // dan sesuai tipe faktur (ARI untuk keluaran, API untuk masukan)
     const verifyPlaceholders = idArray.map((_, i) => `$${i + 2}`).join(',');
     const verifyQuery = `
       SELECT i.c_invoice_id
       FROM c_invoice i
       JOIN c_doctype dt ON i.c_doctype_id = dt.c_doctype_id
       WHERE i.ad_client_id = $1
-        AND i.issotrx = 'Y'
-        AND dt.docbasetype = 'ARI'
+        AND i.issotrx = '${config.isSoTrx}'
+        AND dt.docbasetype = '${config.docBaseType}'
         AND i.docstatus IN ('CO', 'CL')
         AND i.c_invoice_id IN (${verifyPlaceholders})
     `;
@@ -132,13 +158,13 @@ router.get('/export', requireAuth, async (req, res) => {
     const linePlaceholders = validIds.map((_, i) => `$${i + 1}`).join(',');
     const npwpCol = getNpwpColumn();
 
-    // Ambil header faktur (FK)
+    // Ambil header faktur (FK / FM)
     const headerQuery = `
       SELECT 
         i.c_invoice_id,
         i.documentno as nomor_faktur,
         i.dateinvoiced as tanggal,
-        bp.name as nama_pembeli,
+        bp.name as nama_partner,
         COALESCE(bp.${npwpCol}, '000000000000000') as npwp,
         COALESCE(loc.address1 || ', ' || loc.city, '') as alamat,
         COALESCE(SUM(it.taxbaseamt), 0) as dpp,
@@ -172,7 +198,7 @@ router.get('/export', requireAuth, async (req, res) => {
       WHERE il.c_invoice_id IN (${linePlaceholders})
       ORDER BY il.c_invoice_id, il.line
     `;
-    const lineResult = await pool.query(lineQuery, idArray);
+    const lineResult = await pool.query(lineQuery, validIds);
 
     // Group lines by invoice
     const linesByInvoice = {};
@@ -192,9 +218,9 @@ router.get('/export', requireAuth, async (req, res) => {
       const tahunPajak = String(tgl.getFullYear());
       const tanggalFaktur = tgl.toISOString().split('T')[0];
 
-      // FK row (header faktur)
+      // FK/FM row (header faktur)
       csvRows.push({
-        jenis: 'FK',
+        jenis: config.rowPrefix,
         kd_jenis_transaksi: '01',
         fg_pengganti: '0',
         nomor_faktur: inv.nomor_faktur,
@@ -202,7 +228,7 @@ router.get('/export', requireAuth, async (req, res) => {
         tahun_pajak: tahunPajak,
         tanggal_faktur: tanggalFaktur,
         npwp: inv.npwp.replace(/\D/g, ''), // hapus non-digit
-        nama: inv.nama_pembeli,
+        nama: inv.nama_partner,
         alamat_lengkap: inv.alamat,
         jumlah_dpp: Math.round(parseFloat(inv.dpp)),
         jumlah_ppn: Math.round(parseFloat(inv.ppn)),
@@ -271,7 +297,7 @@ router.get('/export', requireAuth, async (req, res) => {
     const recordsString = csvStringifier.stringifyRecords(csvRows);
     const csvContent = headerString + recordsString;
 
-    const filename = `efaktur_${new Date().toISOString().split('T')[0]}.csv`;
+    const filename = `efaktur_${config.label.toLowerCase().replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`;
 
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
