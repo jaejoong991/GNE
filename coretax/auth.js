@@ -63,6 +63,51 @@ async function verifyAdempierePassword(inputPassword, storedPassword) {
   return false;
 }
 
+async function checkUserRoleAccess(userId) {
+  const allowedRolesEnv = process.env.CORETAX_ALLOWED_ROLES;
+
+  // Kalau env kosong, semua role boleh login
+  if (!allowedRolesEnv || !allowedRolesEnv.trim()) {
+    return { allowed: true };
+  }
+
+  const allowedList = allowedRolesEnv.split(',').map(s => s.trim()).filter(Boolean);
+
+  try {
+    const query = `
+      SELECT r.name as role_name, r.ad_role_id::text as role_id
+      FROM ad_user_roles ur
+      JOIN ad_role r ON ur.ad_role_id = r.ad_role_id
+      WHERE ur.ad_user_id = $1
+        AND ur.isactive = 'Y'
+        AND r.isactive = 'Y'
+    `;
+    const result = await pool.query(query, [userId]);
+
+    if (result.rows.length === 0) {
+      return { allowed: false, message: 'User tidak memiliki role yang aktif' };
+    }
+
+    // Cek apakah ada role yang match (by name atau by ID)
+    const hasMatch = result.rows.some(row => {
+      return allowedList.includes(row.role_name) || allowedList.includes(row.role_id);
+    });
+
+    if (!hasMatch) {
+      const userRoles = result.rows.map(r => r.role_name).join(', ');
+      return {
+        allowed: false,
+        message: `Akses ditolak. Role anda: ${userRoles}. Hubungi admin untuk mendapatkan akses.`,
+      };
+    }
+
+    return { allowed: true };
+  } catch (err) {
+    console.error('Role check error:', err);
+    return { allowed: false, message: 'Terjadi kesalahan saat cek role' };
+  }
+}
+
 async function authenticateUser(username, password) {
   try {
     const query = `
@@ -86,6 +131,12 @@ async function authenticateUser(username, password) {
     const passwordMatch = await verifyAdempierePassword(password, user.password);
     if (!passwordMatch) {
       return { success: false, message: 'Password salah' };
+    }
+
+    // Cek role access
+    const roleCheck = await checkUserRoleAccess(user.ad_user_id);
+    if (!roleCheck.allowed) {
+      return { success: false, message: roleCheck.message };
     }
 
     return {

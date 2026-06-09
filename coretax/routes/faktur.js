@@ -101,8 +101,35 @@ router.get('/export', requireAuth, async (req, res) => {
     }
 
     const idArray = Array.isArray(ids) ? ids : [ids];
-    const placeholders = idArray.map((_, i) => `$${i + 2}`).join(',');
-    const linePlaceholders = idArray.map((_, i) => `$${i + 1}`).join(',');
+
+    // Validasi: pastikan semua ID adalah string numerik (prevent injection)
+    if (!idArray.every(id => /^\d+$/.test(String(id)))) {
+      return res.status(400).send('ID faktur tidak valid');
+    }
+
+    // Security: validasi server-side bahwa semua ID benar-benar milik client ini
+    // dan adalah faktur keluaran (ARI). Ini mencegah inspect-element manipulation.
+    const verifyPlaceholders = idArray.map((_, i) => `$${i + 2}`).join(',');
+    const verifyQuery = `
+      SELECT i.c_invoice_id
+      FROM c_invoice i
+      JOIN c_doctype dt ON i.c_doctype_id = dt.c_doctype_id
+      WHERE i.ad_client_id = $1
+        AND i.issotrx = 'Y'
+        AND dt.docbasetype = 'ARI'
+        AND i.docstatus IN ('CO', 'CL')
+        AND i.c_invoice_id IN (${verifyPlaceholders})
+    `;
+    const verifyResult = await pool.query(verifyQuery, [clientId, ...idArray]);
+
+    if (verifyResult.rows.length !== idArray.length) {
+      console.warn(`User ${req.session.userName} (client ${clientId}) mencoba export faktur yang tidak valid:`, idArray);
+      return res.status(403).send('Akses ditolak: beberapa faktur tidak valid atau bukan milik anda');
+    }
+
+    const validIds = verifyResult.rows.map(r => r.c_invoice_id);
+    const placeholders = validIds.map((_, i) => `$${i + 2}`).join(',');
+    const linePlaceholders = validIds.map((_, i) => `$${i + 1}`).join(',');
     const npwpCol = getNpwpColumn();
 
     // Ambil header faktur (FK)
@@ -127,7 +154,7 @@ router.get('/export', requireAuth, async (req, res) => {
       GROUP BY i.c_invoice_id, i.documentno, i.dateinvoiced, bp.name, bp.${npwpCol}, loc.address1, loc.city
       ORDER BY i.dateinvoiced, i.documentno
     `;
-    const headerResult = await pool.query(headerQuery, [clientId, ...idArray]);
+    const headerResult = await pool.query(headerQuery, [clientId, ...validIds]);
 
     // Ambil detail barang per faktur
     const lineQuery = `
